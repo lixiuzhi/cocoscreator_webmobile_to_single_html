@@ -1,0 +1,1 @@
+[1,0,0,[["cc.TextAsset",["_name","text"],1]],[[0,0,1,3]],[[0,"signIn","天数,奖励类型(1钻石2金币3道具),数量(或者车的ID)\r\nnumber,number,number\r\nID,rewardType,amount\r\n1,2,500\r\n2,3,9\r\n3,2,700\r\n4,2,1000\r\n5,2,1500\r\n6,2,2000\r\n7,3,7"]],0,0,[],[],[]]
