@@ -1,7 +1,7 @@
 {
-  "name": "cocos-to-playable-ad",
+  "name": "cocoscreator_webmobile_to_single_html",
   "version": "1.0.0",
-  "description": "将 cocos creator 构建出来的 web-mobile 项目打包为 playable-ad 项目，即单 html 文件。",
+  "description": "",
   "main": "start.ts",
   "dependencies": {},
   "devDependencies": {
