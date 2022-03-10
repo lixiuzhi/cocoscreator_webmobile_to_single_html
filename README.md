@@ -1,0 +1,2 @@
+# cocoscreator_webmobile_to_single_html
+转换cocoscreator 3.4.1发布的webmobile到单html文件
