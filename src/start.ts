@@ -11,6 +11,8 @@ export namespace Tool {
     CC_JS_PATH: "src/web-mobile/cocos-js/cc.js",
     OUTPUT_JS_PATH: "src/dist/cc.js",
     SETTINGJSON_PATH: "src/web-mobile/src/settings.json",
+    LOAD_MODULE_CONTENT_PATH: "src/web-mobile/src/chunks/bundle.js",
+    OUTPUT_LOAD_MODULE_PATH_PATH: "src/dist/load-module-packs-override.js",
     OUTPUT_LOADSETTINGJSON_JS: "src/dist/load-setting-override.js",
     OUTPUT_RES_JS: "src/dist/res.js", // 输出文件res.js
     OUTPUT_INDEX_HTML: "src/dist/index.html", // 输出文件index.html的路径
@@ -26,6 +28,7 @@ export namespace Tool {
       "src/web-mobile/src/chunks/bundle.js",
       "src/add-or-replace-js/override-loader.js",
       "src/dist/load-setting-override.js",
+      "src/dist/load-module-packs-override.js",
       "src/add-or-replace-js/application.js",
       "src/add-or-replace-js/index.js",
     ],
@@ -65,8 +68,7 @@ export namespace Tool {
     return children;
   }
 
-  function write_loadsettingjs() {
-    // 读取并写入到一个对象中
+  function write_loadsettingjs() { 
     var data = get_file_content(C.SETTINGJSON_PATH);
     // 写入文件
     fs.writeFileSync(
@@ -84,15 +86,34 @@ export namespace Tool {
     );
   }
 
+  function write_loadmodulepacks()
+  {
+    var data = get_file_content(C.LOAD_MODULE_CONTENT_PATH); 
+    fs.writeFileSync(
+      C.OUTPUT_LOAD_MODULE_PATH_PATH,
+      `
+      function loadModulePacks(_context,packs)
+      {
+        var script = \`${data}\`
+        var blob = new Blob([script], {
+          type: 'text/plain'
+        });
+
+        return _context["import"]("".concat(URL.createObjectURL(blob)));
+      }
+      `
+    );
+  }
+
   function write_resjs() {
-    // 读取并写入到一个对象中
+ 
     let res_object = {};
     get_all_child_file(C.RES_PATH).forEach((filePath) => {
-      // 注意,存储时删除BASE_PATH前置
+  
       let store_path = filePath.replace(new RegExp(`^${C.BASE_PATH}/`), "");
       res_object[store_path] = get_base64_file_content(filePath);
     });
-    // 写入文件
+ 
     fs.writeFileSync(
       C.OUTPUT_RES_JS,
       `window.res=${JSON.stringify(res_object)}`
@@ -106,27 +127,30 @@ export namespace Tool {
     var reg1 =
       /.loadNative[\s]{0,5}=[\s]{0,5}function[\s\S]{1,100}return new Promise[\s\S]{0,10}function[\s\S]{1,100}.getCache[\s\S]{1,250}XMLHttpRequest[\s\S]{1,40}"load audio failed:[\s\S]{1,100}responseType[\s\S]{1,5}arraybuffer[\s\S]{1,170}decodeAudioData[\s\S]{1,110}.addCache[\s\S]{1,330}.onerror[\s\S]{1,150}.ontimeout[\s\S]{1,150}.onabort[\s\S]{1,150}.send\(null\)\}\)\)\}/;
     var results = data.match(new RegExp(reg1)); 
-    var getCacheFun = results[0].match(new RegExp(/=[\s\S]{1,10}.getCache/))[0].replace("=","");
-    console.log(getCacheFun)
-    var retainCacheFun =results[0].match(new RegExp(/return[\s\S]{1,10}.retainCache/))[0].replace("return","");
-    console.log(retainCacheFun)
-    var decodeAudioDataFun = results[0].match(new RegExp(/\?[\s\S]{1,10}.decodeAudioData/))[0].replace("?","");
-    console.log(decodeAudioDataFun)
-    var addCacheFun = results[0].match(new RegExp(/\{[\s\S]{1,10}.addCache/))[0].replace("{","").replace("}","");
-    console.log(addCacheFun)
-    data = data.replace(
-      results[0],
-      `.loadNative = function (a) { return new Promise((function (t, n) { 
-                    var i = ${getCacheFun}(a);
-                    if (i) return ${retainCacheFun}(a), void t(i); 
-                                    externDownloadArrayBuffer(a,function(data){
-                                        ${decodeAudioDataFun}(data).then((function (n) {
-                                            ${addCacheFun}(a, n), t(n)
-                                        })).catch((function () {}))
-                                    }) 
-                                }))
-                            }`
-    );
+    if(results)
+    {
+      var getCacheFun = results[0].match(new RegExp(/=[\s\S]{1,10}.getCache/))[0].replace("=","");
+      console.log(getCacheFun)
+      var retainCacheFun =results[0].match(new RegExp(/return[\s\S]{1,10}.retainCache/))[0].replace("return","");
+      console.log(retainCacheFun)
+      var decodeAudioDataFun = results[0].match(new RegExp(/\?[\s\S]{1,10}.decodeAudioData/))[0].replace("?","");
+      console.log(decodeAudioDataFun)
+      var addCacheFun = results[0].match(new RegExp(/\{[\s\S]{1,10}.addCache/))[0].replace("{","").replace("}","");
+      console.log(addCacheFun)
+      data = data.replace(
+        results[0],
+        `.loadNative = function (a) { return new Promise((function (t, n) { 
+                      var i = ${getCacheFun}(a);
+                      if (i) return ${retainCacheFun}(a), void t(i); 
+                                      externDownloadArrayBuffer(a,function(data){
+                                          ${decodeAudioDataFun}(data).then((function (n) {
+                                              ${addCacheFun}(a, n), t(n)
+                                          })).catch((function () {}))
+                                      }) 
+                                  }))
+                              }`
+      );
+    }
     // 写入文件
     fs.writeFileSync("src/dist/cc.js", data);
   }
@@ -153,6 +177,11 @@ export namespace Tool {
     console.time("写入load-setting-override.js");
     write_loadsettingjs();
     console.timeEnd("写入load-setting-override.js");
+
+    console.time("写入load-module-packs-override.js");
+    write_loadmodulepacks();
+    console.timeEnd("写入load-module-packs-override.js");
+    
 
     console.time("清理html");
     let html = get_file_content(C.INPUT_HTML_FILE);
