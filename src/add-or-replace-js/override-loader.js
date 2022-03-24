@@ -1,5 +1,5 @@
 function getAsset(url) {
-  //console.log(url)
+   console.log(url)
   var data = window.res[url].split('---');
   var mine = data[0]
   var base64 = data[1];
